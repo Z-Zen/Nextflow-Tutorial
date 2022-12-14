@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-params.words = null
+params.words = ""
 
 // create a channel from given parameter
 testChannel = Channel.from(params.words)
