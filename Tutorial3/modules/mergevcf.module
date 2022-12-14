@@ -2,7 +2,6 @@
 process mergeVCF {
   memory '1 GB'
   cpus 1
-  publishDir "${params.inputDir}/merged", mode: 'copy'
   publishDir "mergedVCF/", mode: 'copy', pattern: "*.vcf"
 
   input:

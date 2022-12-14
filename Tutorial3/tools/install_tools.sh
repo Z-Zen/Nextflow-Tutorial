@@ -5,14 +5,14 @@ if [ -f $1/snpEff_latest_core.zip ]; then
     echo "snpEff_latest_core.zip already downloaded"
 else
     wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip -O $1/snpEff_latest_core.zip
-    # check if  snpEff is unzipped
-    if [ -d $1/snpEff ]; then
-        echo "snpEff already unzipped"
-    else
-        unzip $1/snpEff_latest_core.zip -d $1
-    fi
 fi
 
+# check if  snpEff is unzipped
+if [ -d $1/snpEff ]; then
+    echo "snpEff already unzipped"
+else
+    unzip $1/snpEff_latest_core.zip -d $1
+fi
 
 # check if bcftools 1.16 is already installed
 if [ -f $1/bcftools-1.16/bcftools ]; then

@@ -57,120 +57,18 @@ Channel.fromPath("${params.inputDir}/*.vcf").map { tuple(it.baseName.tokenize(".
 // // check what's inside the channel
 // vcfFiles.view()
 
-// DSL1
-// process that takes a VCF and splits it by chromosome
-process splitVCF {
-  memory '1 GB'
-  cpus 1
-
-  input:
-    tuple val(sampleName), path(vcf) from vcfFiles
-
-  output:
-    file '*.chr*.vcf' into split_ch
-    file "*.log" into split_log_ch
-
-  script:
-    """
-    echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-
-    java -Xmx${task.memory.toGiga()}G -XX:ParallelGCThreads=${task.cpus} -jar ${params.snpSift} split ${vcf}
-
-    echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-    """
-}
-
-// each channel from previous process contains [x.chr1.vcf, x.chr2.vcf, x.chr3.vcf, ...]
-// and we have to treat each chromosome separately using the function flatten below
-split_ch.flatten().set {splitVCFFiles}
-
-// process that annotates each chromosome VCF with VEP from Ensembl in a docker container
-process annotateVCF {
-  memory '1 GB'
-  cpus 1
-
-  input:
-    file vcf from splitVCFFiles
-
-  output:
-    tuple val(sampleName), path('*_annotated.vcf') into annotated_ch
-    file "*.log" into annotate_log_ch
-
-  script:
-  sampleName = vcf.baseName.tokenize(".")[0]
-    """
-    echo "${task.process} - Process start: ${vcf} on \$(cat /etc/hostname) - `date` in `pwd`" > ${task.process}.log
-
-    vep -i ${vcf} \\
-    -o ${vcf.baseName.tokenize(".")[0]}_annotated.vcf \\
-    --database \\
-    --fork ${task.cpus} \\
-    --assembly GRCh38 \\
-    --vcf
-
-    echo "${task.process} - Process end: ${vcf} on `hostname` - `date` in `pwd`" > ${task.process}.log
-    """
-}
-
-// process that merges all annotated VCFs for a sample
-process mergeVCF {
-  memory '1 GB'
-  cpus 1
-  publishDir "mergedVCF/", mode: 'copy', pattern: "*.vcf"
-
-  input:
-    tuple val(sampleName), val(vcf) from annotated_ch.groupTuple().map{tuple(it[0], it[1])}
-
-  output:
-    file '*.merged.vcf' into merged_ch
-    file "*.log" into merge_log_ch
-
-  script:
-    """
-    echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-
-    ${params.bcftools} concat ${vcf.join(" ")} -q 0 -Ov --threads ${task.cpus} -o ${sampleName}.merged.vcf
-
-    echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-    """
-}
-
-// process that collects all logs from previous processes and merges them into a single file
-process collectLogs {
-  publishDir "logs/", mode: 'copy', pattern: "logs.log"
-
-  input:
-    file log from split_log_ch.collectFile(name: 'splitVCF.log')
-    file log from annotate_log_ch.collectFile(name: 'annotateVCF.log')
-    file log from merge_log_ch.collectFile(name: 'mergeVCF.log')
-
-  output:
-    file 'logs.log'
-
-  script:
-    """
-    cat splitVCF.log \\
-      <(echo --------------) \\
-      annotateVCF.log \\
-      <(echo --------------) \\
-      mergeVCF.log \\
-    > logs.log
-    """
-}
-
-
-// // DSL2
+// // DSL1
 // // process that takes a VCF and splits it by chromosome
 // process splitVCF {
 //   memory '1 GB'
 //   cpus 1
 
 //   input:
-//     tuple val(sampleName), path(vcf)
+//     tuple val(sampleName), path(vcf) from vcfFiles
 
 //   output:
-//     path '*.chr*.vcf', emit: splitvcf
-//     path "*.log", emit: splitlog
+//     path '*.chr*.vcf' into split_ch
+//     path "*.log" into split_log_ch
 
 //   script:
 //     """
@@ -182,17 +80,21 @@ process collectLogs {
 //     """
 // }
 
+// // each channel from previous process contains [x.chr1.vcf, x.chr2.vcf, x.chr3.vcf, ...]
+// // and we have to treat each chromosome separately using the function flatten below
+// split_ch.flatten().set {splitVCFFiles}
+
 // // process that annotates each chromosome VCF with VEP from Ensembl in a docker container
 // process annotateVCF {
 //   memory '1 GB'
 //   cpus 1
 
 //   input:
-//     path vcf
+//     path vcf from splitVCFFiles
 
 //   output:
-//     tuple val(sampleName), path('*_annotated.vcf'), emit: annotatedvcf
-//     path "*.log", emit: annotatedlog
+//     tuple val(sampleName), path('*_annotated.vcf') into annotated_ch
+//     path "*.log" into annotate_log_ch
 
 //   script:
 //   sampleName = vcf.baseName.tokenize(".")[0]
@@ -214,15 +116,14 @@ process collectLogs {
 // process mergeVCF {
 //   memory '1 GB'
 //   cpus 1
-//   publishDir "${params.inputDir}/merged", mode: 'copy'
 //   publishDir "mergedVCF/", mode: 'copy', pattern: "*.vcf"
 
 //   input:
-//     tuple val(sampleName), val(vcf)
+//     tuple val(sampleName), val(vcf) from annotated_ch.groupTuple().map{tuple(it[0], it[1])}
 
 //   output:
-//     path '*.merged.vcf', emit: mergedvcf
-//     path "*.log", emit: mergedlog
+//     file '*.merged.vcf' into merged_ch
+//     file "*.log" into merge_log_ch
 
 //   script:
 //     """
@@ -239,9 +140,9 @@ process collectLogs {
 //   publishDir "logs/", mode: 'copy', pattern: "logs.log"
 
 //   input:
-//     path log
-//     path log
-//     path log
+//     path log from split_log_ch.collectFile(name: 'splitVCF.log')
+//     path log from annotate_log_ch.collectFile(name: 'annotateVCF.log')
+//     path log from merge_log_ch.collectFile(name: 'mergeVCF.log')
 
 //   output:
 //     path 'logs.log'
@@ -258,44 +159,143 @@ process collectLogs {
 // }
 
 
+// DSL2
+// process that takes a VCF and splits it by chromosome
+process splitVCF {
+  memory '1 GB'
+  cpus 1
+
+  input:
+    tuple val(sampleName), path(vcf)
+
+  output:
+    path '*.chr*.vcf', emit: splitvcf
+    path "*.log", emit: splitlog
+
+  script:
+    """
+    echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+
+    java -Xmx${task.memory.toGiga()}G -XX:ParallelGCThreads=${task.cpus} -jar ${params.snpSift} split ${vcf}
+
+    echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+    """
+}
+
+// process that annotates each chromosome VCF with VEP from Ensembl in a docker container
+process annotateVCF {
+  memory '1 GB'
+  cpus 1
+
+  input:
+    path vcf
+
+  output:
+    tuple val(sampleName), path('*_annotated.vcf'), emit: annotatedvcf
+    path "*.log", emit: annotatedlog
+
+  script:
+  sampleName = vcf.baseName.tokenize(".")[0]
+    """
+    echo "${task.process} - Process start: ${vcf} on \$(cat /etc/hostname) - `date` in `pwd`" > ${task.process}.log
+
+    vep -i ${vcf} \\
+    -o ${vcf.baseName.tokenize(".")[0]}_annotated.vcf \\
+    --database \\
+    --fork ${task.cpus} \\
+    --assembly GRCh38 \\
+    --vcf
+
+    echo "${task.process} - Process end: ${vcf} on `hostname` - `date` in `pwd`" > ${task.process}.log
+    """
+}
+
+// process that merges all annotated VCFs for a sample
+process mergeVCF {
+  memory '1 GB'
+  cpus 1
+  publishDir "${params.inputDir}/merged", mode: 'copy'
+  publishDir "mergedVCF/", mode: 'copy', pattern: "*.vcf"
+
+  input:
+    tuple val(sampleName), val(vcf)
+
+  output:
+    path '*.merged.vcf', emit: mergedvcf
+    path "*.log", emit: mergedlog
+
+  script:
+    """
+    echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+
+    ${params.bcftools} concat ${vcf.join(" ")} -q 0 -Ov --threads ${task.cpus} -o ${sampleName}.merged.vcf
+
+    echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+    """
+}
+
+// process that collects all logs from previous processes and merges them into a single file
+process collectLogs {
+  publishDir "logs/", mode: 'copy', pattern: "logs.log"
+
+  input:
+    path log
+    path log
+    path log
+
+  output:
+    path 'logs.log'
+
+  script:
+    """
+    cat splitVCF.log \\
+      <(echo --------------) \\
+      annotateVCF.log \\
+      <(echo --------------) \\
+      mergeVCF.log \\
+    > logs.log
+    """
+}
+
+
 // include { splitVCF } from './modules/splitvcf.module'
 // include { annotateVCF } from './modules/annotatevcf.module'
 // include { mergeVCF } from './modules/mergevcf.module'
 // include { collectLogs } from './modules/collectlogs.module'
 
-// // create a named pipeline
-// workflow awesome_pipeline {
-//     take:
-//       vcfFiles
-//     main: 
-//       splitVCF( vcfFiles )
-//       annotateVCF( splitVCF.out.splitvcf.flatten() )
-//       mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ tuple(it[0], it[1]) } )
-//       collectLogs( 
-//                    splitVCF.out.splitlog.collectFile(name: 'splitVCF.log'), 
-//                    annotateVCF.out.annotatedlog.collectFile(name: 'annotateVCF.log'),
-//                    mergeVCF.out.mergedlog.collectFile(name: 'mergeVCF.log')
-//                  )
-// }
+// create a named pipeline
+workflow awesome_pipeline {
+    take:
+      vcfFiles
+    main: 
+      splitVCF( vcfFiles )
+      annotateVCF( splitVCF.out.splitvcf.flatten() )
+      mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ tuple(it[0], it[1]) } )
+      collectLogs( 
+                   splitVCF.out.splitlog.collectFile(name: 'splitVCF.log'), 
+                   annotateVCF.out.annotatedlog.collectFile(name: 'annotateVCF.log'),
+                   mergeVCF.out.mergedlog.collectFile(name: 'mergeVCF.log')
+                 )
+}
 
-// // create another named pipeline
-// workflow removelogs {
-//     take:
-//       vcfFiles
-//     main: 
-//       splitVCF( vcfFiles )
-//       annotateVCF( splitVCF.out.splitvcf.flatten() )
-//       mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ tuple(it[0], it[1]) } )
-// }
+// create another named pipeline
+workflow removelogs {
+    take:
+      vcfFiles
+    main: 
+      splitVCF( vcfFiles )
+      annotateVCF( splitVCF.out.splitvcf.flatten() )
+      mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ tuple(it[0], it[1]) } )
+}
 
-// // run the pipeline
-// workflow {
-//   if(params.logs){
-//     awesome_pipeline(vcfFiles)
-//   } else {
-//     removelogs(vcfFiles)
-//   }
-// }
+// run the pipeline
+workflow {
+  if(params.logs){
+    awesome_pipeline(vcfFiles)
+  } else {
+    removelogs(vcfFiles)
+  }
+}
 
 
 // When workflow is finished, print some metadata

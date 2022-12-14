@@ -2,44 +2,47 @@
 
 // Introducing nextflow.config and modules
 
-// params.inputFile = null
+params.inputFile = null
 
-// if (!params.inputFile) {
-//   println "Please specify --inputFile"
-//   System.exit(1)
-// }
+if (!params.inputFile) {
+  println "Please specify --inputFile"
+  System.exit(1)
+}
 
 // DSL1
-// process process1 {
-//   input:
-//     ? inputFile from params.inputFile
+// Define the qualifiers for the process
+process process1 {
+  input:
+    ? inputFile from params.inputFile
 
-//   output:
-//     ? 'output*' into outputFile
+  output:
+    ? 'output*' into outputFile
 
-//   script:
-//     """
-//     split -l 1 $inputFile output_
-//     """
-// }
+  script:
+    """
+    split -l 1 $inputFile output_
+    """
+}
 
-// outputFile.?().set { outputFile2 }
+// which function to use to flat the list of files?
+outputFile.?().set { outputFile2 }
 
-// process process2 {
-//   tag "filename: $inputFile - task process: $task.process - task index: $task.index - task attempt: $task.attempt"
-//   publishDir "inputFileResults/", mode: 'copy'
+// Replace the ? with the correct value
+process process2 {
+  tag "filename: $inputFile - task process: $task.process - task index: $task.index - task attempt: $task.attempt"
+  publishDir "inputFileResults/", mode: 'copy'
 
-//   input:
-//     path inputFile from ?
+  input:
+    file inputFile from ?
 
-//   output:
-//     path ? into outputFile3
+  output:
+    file ? into outputFile3
 
-//   script:
-//     """
-//     cat ${inputFile} > \$(cat ${inputFile} | cut -f1 -d".").txt
-//     """
-// }
+  script:
+    """
+    cat ${inputFile} > \$(cat ${inputFile} | cut -f1 -d".").txt
+    """
+}
 
 
 // // DSL2
@@ -69,6 +72,7 @@
 //     """
 // }
 
+// // Chain the processes
 // workflow {
 //   ?
 //   ?
@@ -95,10 +99,10 @@
 // // DSL1
 // process process1 {
 //   input:
-//     path inputFile from input_ch
+//     file inputFile from input_ch
 
 //   output:
-//     path 'output*' into outputFile
+//     file 'output*' into outputFile
 
 //   script:
 //     """
@@ -113,10 +117,10 @@
 //   publishDir "inputFileResults/", mode: 'copy'
 
 //   input:
-//     path inputFile from outputFile2
+//     file inputFile from outputFile2
 
 //   output:
-//     path '*.txt' into outputFile3
+//     file '*.txt' into outputFile3
 
 //   script:
 //     """

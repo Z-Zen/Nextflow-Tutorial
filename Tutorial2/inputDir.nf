@@ -34,10 +34,11 @@ Channel
 // ch_input.view()
 
 // DSL1
+// cat file1 and file2 in a new file of the same name
 process process1 {
   debug true
   input:
-    tuple val(filename), path(file1), path(file2) from ch_input
+    tuple val(filename), file(file1), file(file2) from ch_input
 
   output:
     tuple ?, ?("*.txt") into ch_output
@@ -52,14 +53,14 @@ process process1 {
     """
 }
 
-
+// publish results into specified directory
 process process2 {
   debug true
   tag "$filename - $task.process - $task.index - $task.attempt"
   publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
 
   input:
-    tuple val(filename), path(inputfile) from ch_output
+    tuple val(filename), file(inputfile) from ch_output
 
   output:
     ?
@@ -71,8 +72,6 @@ process process2 {
     cat ${inputfile} > ${filename}.txt
     """
 }
-
-
 
 
 // DSL2
@@ -121,10 +120,10 @@ process process2 {
 // }
 
 
+// --------------------------------------------------------------------------------------------------------------------
 
 
-
-// corrigé
+// // corrigé
 
 // params.inputDir = null
 
@@ -133,7 +132,7 @@ process process2 {
 //   System.exit(1)
 // }
 
-// get files from directory into a channel
+// // get files from directory into a channel
 // Channel
 //   .fromFilePairs(["${params.inputDir}/*_{1,2}.txt", "${params.inputDir}/file2.txt"], size: -1)   // size: -1 means all files
 //   .map{ tuple(it[0].tokenize(".")[0].tokenize("_")[0], it[1][0], it[1][1]) }.set{ ch_input }     // return a list of (filename, file1, file2) into ch_input channel
@@ -145,10 +144,10 @@ process process2 {
 //   debug true
 
 //   input:
-//     tuple val(filename), path(file1), path(file2) from ch_input
+//     tuple val(filename), file(file1), file(file2) from ch_input
 
 //   output:
-//     tuple val(filename), path("*.txt") into ch_output
+//     tuple val(filename), file("*.txt") into ch_output
 
 //   script:
 //     """
@@ -167,10 +166,10 @@ process process2 {
 //   publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
 
 //   input:
-//     tuple val(filename), path(inputfile) from ch_output
+//     tuple val(filename), file(inputfile) from ch_output
 
 //   output:
-//     path "*.txt"
+//     file "*.txt"
 
 //   script:
 //     """
@@ -181,14 +180,13 @@ process process2 {
 // }
 
 // DSL2
-
 // process process1 {
 //   debug true
 //   input:
-//    tuple val(filename), path(file1), path(file2)
+//    tuple val(filename), file(file1), file(file2)
 
 //   output:
-//    tuple val(filename), path("*.txt")
+//    tuple val(filename), file("*.txt")
 
 //   script:
 //   """
@@ -206,10 +204,10 @@ process process2 {
 //   publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
 
 //   input:
-//     tuple val(filename), path(inputfile)
+//     tuple val(filename), file(inputfile)
 
 //   output:
-//     path "*.txt"
+//     file "*.txt"
 
 //   script:
 //   """
@@ -226,4 +224,72 @@ process process2 {
 // workflow {
 //   process1(ch_input)
 //   process2(process1.out)
+// }
+
+
+
+
+// Different type of approaches for process1 if we would like to use 'path' instead of 'file' qualifiers.
+
+// // Approach 1
+// // get files from directory into a channel
+// Channel
+//   .fromFilePairs(["${params.inputDir}/*_{1,2}.txt", "${params.inputDir}/file2.txt"], size: -1)   // size: -1 means all files
+//   .map{ if(it[1][1] == null){
+//           return tuple(it[0].tokenize(".")[0].tokenize("_")[0], it[1][0], "")
+//         } else {
+//           return tuple(it[0].tokenize(".")[0].tokenize("_")[0], it[1][0], it[1][1])
+//         }
+//       }.set{ ch_input }     // return a list of (filename, file1, file2) into ch_input channel
+
+// // ch_input.view()
+
+// // DSL1
+// process process1 {
+//   debug true
+
+//   input:
+//     tuple val(filename), path(file1), val(file2) from ch_input
+
+//   output:
+//     tuple val(filename), file("*.txt") into ch_output
+
+//   script:
+//     """
+//     echo "filename: $filename"
+//     echo "file1: $file1"
+//     if [[ -s "$file2" ]]; then echo "file2: $file2"; fi
+
+//     cat $file1 $file2 > ${filename}_new.txt
+//     """
+// }
+
+
+// // Approach 2
+// Channel
+//   .fromFilePairs(["${params.inputDir}/*_{1,2}.txt", "${params.inputDir}/file2.txt"], size: -1).set{ ch_input }
+
+// // // DSL1
+// process process1 {
+//   debug true
+
+//   input:
+//     val mylist from ch_input
+
+//   output:
+//     tuple val(filename), file("*.txt") into ch_output
+
+//   script:
+//   filename = mylist[0]
+//     """
+//     echo "filename: ${mylist[0]}"
+//     echo "file1: ${mylist[1][0]}"
+//     if [[ -s "${mylist[1][1]}" ]]; then echo "file2: ${mylist[1][1]}"; fi
+
+//     if [[ -s "${mylist[1][1]}" ]]; then
+//       cat ${mylist[1][0]} ${mylist[1][1]} > ${mylist[0]}_new.txt
+//     else
+//       cat ${mylist[1][0]} > ${mylist[0]}_new.txt
+//     fi
+//     """
 // }

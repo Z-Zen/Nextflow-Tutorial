@@ -1,10 +1,10 @@
 process process1 {
   debug true
   input:
-  tuple val(sample), path(file1), file(file2)
+  tuple val(sample), file(file1), file(file2)
 
   output:
-    tuple val(sample), path("*.txt")
+    tuple val(sample), file("*.txt")
 
   script:
   """

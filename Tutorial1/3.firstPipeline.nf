@@ -12,7 +12,7 @@ testChannel = Channel.from(params.words)
 process test {
   debug true
   tag "$words - $task.process - $task.index - $task.attempt"          // tag is the name of the process
-  publishDir 'outputDir', pattern: '*.txt'                            // publishDir is the directory where the output files will be stored
+  publishDir 'outputDir', pattern: '*.txt', mode: 'copy'              // publishDir is the directory where the output files will be stored
   memory = { task.exitStatus != 0 ? 1.GB * task.attempt : 1.GB }      // dynamic memory allocation based on task.attempt
   errorStrategy = { task.exitStatus != 0 ? 'retry' : 'terminate' }    // dynamic errorStrategy based on task.exitStatus
   maxRetries = 3                                                      // maxRetries is the number of times a task will be retried
