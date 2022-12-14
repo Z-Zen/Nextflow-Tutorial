@@ -1,0 +1,21 @@
+// process that takes a VCF and splits it by chromosome
+process splitVCF {
+  memory '1 GB'
+  cpus 1
+
+  input:
+    tuple val(sampleName), path(vcf)
+
+  output:
+    path '*.chr*.vcf', emit: splitvcf
+    path "*.log", emit: splitlog
+
+  script:
+    """
+    echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+
+    java -Xmx${task.memory.toGiga()}G -XX:ParallelGCThreads=${task.cpus} -jar ${params.snpSift} split ${vcf}
+
+    echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+    """
+}

@@ -1,0 +1,23 @@
+// process that merges all annotated VCFs for a sample
+process mergeVCF {
+  memory '1 GB'
+  cpus 1
+  publishDir "${params.inputDir}/merged", mode: 'copy'
+  publishDir "mergedVCF/", mode: 'copy', pattern: "*.vcf"
+
+  input:
+    tuple val(sampleName), val(vcf)
+
+  output:
+    path '*.merged.vcf', emit: mergedvcf
+    path "*.log", emit: mergedlog
+
+  script:
+    """
+    echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+
+    ${params.bcftools} concat ${vcf.join(" ")} -q 0 -Ov --threads ${task.cpus} -o ${sampleName}.merged.vcf
+
+    echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
+    """
+}

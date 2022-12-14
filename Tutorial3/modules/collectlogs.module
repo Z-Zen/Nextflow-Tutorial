@@ -1,0 +1,22 @@
+// process that collects all logs from previous processes and merges them into a single file
+process collectLogs {
+  publishDir "logs/", mode: 'copy', pattern: "logs.log"
+
+  input:
+    path log
+    path log
+    path log
+
+  output:
+    path 'logs.log'
+
+  script:
+    """
+    cat splitVCF.log \\
+      <(echo --------------) \\
+      annotateVCF.log \\
+      <(echo --------------) \\
+      mergeVCF.log \\
+    > logs.log
+    """
+}

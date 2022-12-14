@@ -1,0 +1,19 @@
+
+process process2 {
+  debug true
+  tag "$sample - $task.process - $task.index - $task.attempt"
+  publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
+
+  input:
+    tuple val(sample), file(inputfile)
+
+  output:
+    file "*.txt"
+
+  script:
+  """
+  echo sample: ${sample}
+  echo inputfile: ${inputfile}
+  cat ${inputfile} > ${sample}.txt
+  """
+}

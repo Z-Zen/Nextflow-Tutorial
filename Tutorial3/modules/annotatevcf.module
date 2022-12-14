@@ -1,0 +1,27 @@
+// process that annotates each chromosome VCF with VEP from Ensembl in a docker container
+process annotateVCF {
+  memory '1 GB'
+  cpus 1
+
+  input:
+    path vcf
+
+  output:
+    tuple val(sampleName), path('*_annotated.vcf'), emit: annotatedvcf
+    path "*.log", emit: annotatedlog
+
+  script:
+  sampleName = vcf.baseName.tokenize(".")[0]
+    """
+    echo "${task.process} - Process start: ${vcf} on \$(cat /etc/hostname) - `date` in `pwd`" > ${task.process}.log
+
+    vep -i ${vcf} \\
+    -o ${vcf.baseName.tokenize(".")[0]}_annotated.vcf \\
+    --database \\
+    --fork ${task.cpus} \\
+    --assembly GRCh38 \\
+    --vcf
+
+    echo "${task.process} - Process end: ${vcf} on `hostname` - `date` in `pwd`" > ${task.process}.log
+    """
+}

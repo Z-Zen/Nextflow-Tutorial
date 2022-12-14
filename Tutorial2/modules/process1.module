@@ -1,0 +1,17 @@
+process process1 {
+  debug true
+  input:
+  tuple val(sample), file(file1), file(file2)
+
+  output:
+    tuple val(sample), file("*.txt")
+
+  script:
+  """
+  echo "sample: $sample"
+  echo "file1: $file1"
+  if [[ -s "$file2" ]]; then echo "file2: $file2"; fi
+
+  cat $file1 $file2 > ${sample}_new.txt
+  """
+}

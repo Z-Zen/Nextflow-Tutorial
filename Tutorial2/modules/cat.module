@@ -1,0 +1,15 @@
+process process2 {
+  tag "filename: $inputFile - task process: $task.process - task index: $task.index - task attempt: $task.attempt"
+  publishDir "inputFileResults/", mode: 'copy'
+
+  input:
+    file inputFile
+
+  output:
+    file '*.txt'
+
+  script:
+    """
+    cat ${inputFile} > \$(cat ${inputFile} | cut -f1 -d".").txt
+    """
+}

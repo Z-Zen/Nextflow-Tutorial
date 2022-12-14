@@ -1,0 +1,12 @@
+process process1 {
+  input:
+    file inputFile
+
+  output:
+    file 'output*'
+
+  script:
+    """
+    split -l 1 $inputFile output_
+    """
+}
