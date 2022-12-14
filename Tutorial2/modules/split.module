@@ -1,9 +1,9 @@
 process process1 {
   input:
-    file inputFile
+    path inputFile
 
   output:
-    file 'output*'
+    path 'output*'
 
   script:
     """

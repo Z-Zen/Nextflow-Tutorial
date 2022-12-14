@@ -5,10 +5,10 @@ process process2 {
   publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
 
   input:
-    tuple val(sample), file(inputfile)
+    tuple val(sample), path(inputfile)
 
   output:
-    file "*.txt"
+    path "*.txt"
 
   script:
   """

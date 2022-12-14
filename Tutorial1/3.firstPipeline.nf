@@ -25,7 +25,7 @@ process test {
     val words from testChannel
 
   output:
-    file 'test.txt' into testOutput
+    path 'test.txt' into testOutput
 
   script:
     """
@@ -42,7 +42,7 @@ process test2 {
   maxRetries = 3
 
   input:
-    file inputfile from testOutput
+    path inputfile from testOutput
 
   script:
     """
@@ -62,7 +62,7 @@ process test2 {
 //     val words
 
 //   output:
-//     file 'test.txt'
+//     path 'test.txt'
 
 //   script:
 //     """
@@ -77,7 +77,7 @@ process test2 {
 //   maxRetries = 3
 
 //   input:
-//     file inputfile
+//     path inputfile
 
 //   script:
 //     """

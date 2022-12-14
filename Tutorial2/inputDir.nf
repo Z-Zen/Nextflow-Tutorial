@@ -37,7 +37,7 @@ Channel
 process process1 {
   debug true
   input:
-    tuple val(filename), file(file1), file(file2) from ch_input
+    tuple val(filename), path(file1), path(file2) from ch_input
 
   output:
     tuple ?, ?("*.txt") into ch_output
@@ -59,7 +59,7 @@ process process2 {
   publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
 
   input:
-    tuple val(filename), file(inputfile) from ch_output
+    tuple val(filename), path(inputfile) from ch_output
 
   output:
     ?
@@ -145,10 +145,10 @@ process process2 {
 //   debug true
 
 //   input:
-//     tuple val(filename), file(file1), file(file2) from ch_input
+//     tuple val(filename), path(file1), path(file2) from ch_input
 
 //   output:
-//     tuple val(filename), file("*.txt") into ch_output
+//     tuple val(filename), path("*.txt") into ch_output
 
 //   script:
 //     """
@@ -167,10 +167,10 @@ process process2 {
 //   publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
 
 //   input:
-//     tuple val(filename), file(inputfile) from ch_output
+//     tuple val(filename), path(inputfile) from ch_output
 
 //   output:
-//     file "*.txt"
+//     path "*.txt"
 
 //   script:
 //     """
@@ -185,10 +185,10 @@ process process2 {
 // process process1 {
 //   debug true
 //   input:
-//    tuple val(filename), file(file1), file(file2)
+//    tuple val(filename), path(file1), path(file2)
 
 //   output:
-//    tuple val(filename), file("*.txt")
+//    tuple val(filename), path("*.txt")
 
 //   script:
 //   """
@@ -206,10 +206,10 @@ process process2 {
 //   publishDir "inputDirResults/", mode: 'copy', pattern: "*.txt"
 
 //   input:
-//     tuple val(filename), file(inputfile)
+//     tuple val(filename), path(inputfile)
 
 //   output:
-//     file "*.txt"
+//     path "*.txt"
 
 //   script:
 //   """

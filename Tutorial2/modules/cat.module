@@ -3,10 +3,10 @@ process process2 {
   publishDir "inputFileResults/", mode: 'copy'
 
   input:
-    file inputFile
+    path inputFile
 
   output:
-    file '*.txt'
+    path '*.txt'
 
   script:
     """

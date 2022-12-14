@@ -30,10 +30,10 @@
 //   publishDir "inputFileResults/", mode: 'copy'
 
 //   input:
-//     file inputFile from ?
+//     path inputFile from ?
 
 //   output:
-//     file ? into outputFile3
+//     path ? into outputFile3
 
 //   script:
 //     """
@@ -45,10 +45,10 @@
 // // DSL2
 // process process1 {
 //   input:
-//   file inputFile
+//   path inputFile
 
 //   output:
-//   file 'output*'
+//   path 'output*'
 
 //   script:
 //     """
@@ -61,7 +61,7 @@
 //   tag "filename: $inputFile - task process: $task.process - task index: $task.index - task attempt: $task.attempt"
 
 //   input:
-//   file inputFile
+//   path inputFile
 
 //   script:
 //     """
@@ -95,10 +95,10 @@
 // // DSL1
 // process process1 {
 //   input:
-//     file inputFile from input_ch
+//     path inputFile from input_ch
 
 //   output:
-//     file 'output*' into outputFile
+//     path 'output*' into outputFile
 
 //   script:
 //     """
@@ -113,10 +113,10 @@
 //   publishDir "inputFileResults/", mode: 'copy'
 
 //   input:
-//     file inputFile from outputFile2
+//     path inputFile from outputFile2
 
 //   output:
-//     file '*.txt' into outputFile3
+//     path '*.txt' into outputFile3
 
 //   script:
 //     """
@@ -127,10 +127,10 @@
 // // DSL2
 // process process1 {
 //   input:
-//     file inputFile
+//     path inputFile
 
 //   output:
-//     file 'output*'
+//     path 'output*'
 
 //   script:
 //     """
@@ -143,10 +143,10 @@
 //   publishDir "inputFileResults/", mode: 'copy'
 
 //   input:
-//     file inputFile
+//     path inputFile
 
 //   output:
-//     file '*.txt'
+//     path '*.txt'
 
 //   script:
 //     """
