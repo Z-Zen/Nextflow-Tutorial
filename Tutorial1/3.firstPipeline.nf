@@ -1,5 +1,8 @@
 #!/usr/bin/env nextflow
 
+// init params
+params.words = ""
+
 testChannel = Channel.from(params.words)
 
 // DSL1
