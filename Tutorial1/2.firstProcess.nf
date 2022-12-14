@@ -1,5 +1,7 @@
 #!/usr/bin/env nextflow
 
+params.words = null
+
 // create a channel from given parameter
 testChannel = Channel.from(params.words)
 
