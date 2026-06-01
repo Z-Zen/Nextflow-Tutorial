@@ -24,7 +24,7 @@ params.logs     = null
 
 // tools that will be used in the pipeline
 params.snpSift      = "${workflow.launchDir}/tools/snpEff/SnpSift.jar"
-params.bcftools     = "${workflow.launchDir}/tools/bcftools-1.16/bcftools"
+params.bcftools     = "${workflow.launchDir}/tools/bcftools/bcftools"
 params.installtools = "${workflow.launchDir}/tools/install_tools.sh"
 
 
