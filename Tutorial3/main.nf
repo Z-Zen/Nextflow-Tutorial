@@ -1,165 +1,37 @@
 #!/usr/bin/env nextflow
 
-// get current launch directory
-currentDir = workflow.launchDir
+// A real-world DSL2 pipeline, migrated for Nextflow 26.04.
+//
+// What changed for 26.04 (strict syntax parser is now the default):
+//   1. Statements and declarations can no longer be mixed at the top level.
+//      All imperative code (tool checks, parameter validation, channel
+//      creation) now lives inside the entry `workflow {}` block.
+//   2. `System.exit(1)` is replaced by the `error()` function.
+//   3. Duplicate process input names (three `path log`) are now invalid and
+//      have been given distinct names.
+//   4. Closures use explicit parameters instead of the implicit `it`
+//      (implicit `it` is deprecated under the strict parser).
+//   5. The legacy DSL1 versions (process inputs with `from` / outputs with
+//      `into`) were removed - they no longer parse on 26.04.
+//
+// To temporarily fall back to the old parser:  export NXF_SYNTAX_PARSER=v1
 
-// input directory containing VCFs files
+// ---------------------------------------------------------------------------
+// Parameters (legacy parameter declarations are still allowed at top level)
+// ---------------------------------------------------------------------------
 params.inputDir = null
-
-params.logs = null
+params.logs     = null
 
 // tools that will be used in the pipeline
-params.snpSift = currentDir + '/tools/snpEff/SnpSift.jar'
-params.bcftools = currentDir + '/tools/bcftools-1.16/bcftools'
-
-// tools installation script
-params.installtools = currentDir + '/tools/install_tools.sh'
-
-// check if snpSift is available
-if (!file(params.snpSift).exists()) {
-    println "SnpSift not found: ${params.snpSift}"
-    println "Installing SnpSift..."
-    def sout = new StringBuilder(), serr = new StringBuilder()
-    def proc = "bash ${params.installtools} ${currentDir}/tools".execute()
-    proc.consumeProcessOutput(sout, serr)
-    proc.waitFor()
-} else {
-    println "SnpSift found: ${params.snpSift}"
-}
-
-// check if bcftools is available
-if (!file(params.bcftools).exists()) {
-    println "bcftools not found: ${params.bcftools}"
-    println "Installing bcftools..."
-    def sout = new StringBuilder(), serr = new StringBuilder()
-    def proc = "bash ${params.installtools} ${currentDir}/tools".execute()
-    proc.consumeProcessOutput(sout, serr)
-    proc.waitFor()
-} else {
-    println "bcftools found: ${params.bcftools}"
-}
-
-// check if input directory is provided
-if (!params.inputDir) {
-  println "Please specify --inputDir"
-  System.exit(1)
-}
-
-// check if inputDir is a directory
-if (!file(params.inputDir).isDirectory()) {
-  println "Input directory ${params.inputDir} is not a directory"
-  System.exit(1)
-}
-
-// create a channel from the input dir only containing vcf files
-Channel.fromPath("${params.inputDir}/*.vcf").map { tuple(it.baseName.tokenize(".")[0], it) }.set {vcfFiles}
-
-// // check what's inside the channel
-// vcfFiles.view()
-
-// // DSL1
-// // process that takes a VCF and splits it by chromosome
-// process splitVCF {
-//   memory '1 GB'
-//   cpus 1
-
-//   input:
-//     tuple val(sampleName), path(vcf) from vcfFiles
-
-//   output:
-//     path '*.chr*.vcf' into split_ch
-//     path "*.log" into split_log_ch
-
-//   script:
-//     """
-//     echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-
-//     java -Xmx${task.memory.toGiga()}G -XX:ParallelGCThreads=${task.cpus} -jar ${params.snpSift} split ${vcf}
-
-//     echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-//     """
-// }
-
-// // each channel from previous process contains [x.chr1.vcf, x.chr2.vcf, x.chr3.vcf, ...]
-// // and we have to treat each chromosome separately using the function flatten below
-// split_ch.flatten().set {splitVCFFiles}
-
-// // process that annotates each chromosome VCF with VEP from Ensembl in a docker container
-// process annotateVCF {
-//   memory '1 GB'
-//   cpus 1
-
-//   input:
-//     path vcf from splitVCFFiles
-
-//   output:
-//     tuple val(sampleName), path('*_annotated.vcf') into annotated_ch
-//     path "*.log" into annotate_log_ch
-
-//   script:
-//   sampleName = vcf.baseName.tokenize(".")[0]
-//     """
-//     echo "${task.process} - Process start: ${vcf} on \$(cat /etc/hostname) - `date` in `pwd`" > ${task.process}.log
-
-//     vep -i ${vcf} \\
-//     -o ${vcf.baseName.tokenize(".")[0]}_annotated.vcf \\
-//     --database \\
-//     --fork ${task.cpus} \\
-//     --assembly GRCh38 \\
-//     --vcf
-
-//     echo "${task.process} - Process end: ${vcf} on `hostname` - `date` in `pwd`" > ${task.process}.log
-//     """
-// }
-
-// // process that merges all annotated VCFs for a sample
-// process mergeVCF {
-//   memory '1 GB'
-//   cpus 1
-//   publishDir "mergedVCF/", mode: 'copy', pattern: "*.vcf"
-
-//   input:
-//     tuple val(sampleName), val(vcf) from annotated_ch.groupTuple().map{tuple(it[0], it[1])}
-
-//   output:
-//     file '*.merged.vcf' into merged_ch
-//     file "*.log" into merge_log_ch
-
-//   script:
-//     """
-//     echo "${task.process} - Process start: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-
-//     ${params.bcftools} concat ${vcf.join(" ")} -q 0 -Ov --threads ${task.cpus} -o ${sampleName}.merged.vcf
-
-//     echo "${task.process} - Process end: ${sampleName} on `hostname` - `date` in `pwd`" > ${task.process}.log
-//     """
-// }
-
-// // process that collects all logs from previous processes and merges them into a single file
-// process collectLogs {
-//   publishDir "logs/", mode: 'copy', pattern: "logs.log"
-
-//   input:
-//     path log from split_log_ch.collectFile(name: 'splitVCF.log')
-//     path log from annotate_log_ch.collectFile(name: 'annotateVCF.log')
-//     path log from merge_log_ch.collectFile(name: 'mergeVCF.log')
-
-//   output:
-//     path 'logs.log'
-
-//   script:
-//     """
-//     cat splitVCF.log \\
-//       <(echo --------------) \\
-//       annotateVCF.log \\
-//       <(echo --------------) \\
-//       mergeVCF.log \\
-//     > logs.log
-//     """
-// }
+params.snpSift      = "${workflow.launchDir}/tools/snpEff/SnpSift.jar"
+params.bcftools     = "${workflow.launchDir}/tools/bcftools-1.16/bcftools"
+params.installtools = "${workflow.launchDir}/tools/install_tools.sh"
 
 
-// DSL2
+// ---------------------------------------------------------------------------
+// Processes
+// ---------------------------------------------------------------------------
+
 // process that takes a VCF and splits it by chromosome
 process splitVCF {
   memory '1 GB'
@@ -238,10 +110,13 @@ process mergeVCF {
 process collectLogs {
   publishDir "logs/", mode: 'copy', pattern: "logs.log"
 
+  // NOTE (26.04): each input must have a unique name. The three logs are
+  // staged under fixed names by the collectFile() calls in the workflow,
+  // so the variable names here are only used to declare the inputs.
   input:
-    path log
-    path log
-    path log
+    path splitlog
+    path annotatelog
+    path mergelog
 
   output:
     path 'logs.log'
@@ -258,6 +133,10 @@ process collectLogs {
 }
 
 
+// ---------------------------------------------------------------------------
+// Named workflows
+// ---------------------------------------------------------------------------
+
 // include { splitVCF } from './modules/splitvcf.module'
 // include { annotateVCF } from './modules/annotatevcf.module'
 // include { mergeVCF } from './modules/mergevcf.module'
@@ -267,12 +146,12 @@ process collectLogs {
 workflow awesome_pipeline {
     take:
       vcfFiles
-    main: 
+    main:
       splitVCF( vcfFiles )
       annotateVCF( splitVCF.out.splitvcf.flatten() )
-      mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ tuple(it[0], it[1]) } )
-      collectLogs( 
-                   splitVCF.out.splitlog.collectFile(name: 'splitVCF.log'), 
+      mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ row -> tuple(row[0], row[1]) } )
+      collectLogs(
+                   splitVCF.out.splitlog.collectFile(name: 'splitVCF.log'),
                    annotateVCF.out.annotatedlog.collectFile(name: 'annotateVCF.log'),
                    mergeVCF.out.mergedlog.collectFile(name: 'mergeVCF.log')
                  )
@@ -282,26 +161,71 @@ workflow awesome_pipeline {
 workflow removelogs {
     take:
       vcfFiles
-    main: 
+    main:
       splitVCF( vcfFiles )
       annotateVCF( splitVCF.out.splitvcf.flatten() )
-      mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ tuple(it[0], it[1]) } )
+      mergeVCF( annotateVCF.out.annotatedvcf.groupTuple().map{ row -> tuple(row[0], row[1]) } )
 }
 
-// run the pipeline
+
+// ---------------------------------------------------------------------------
+// Entry workflow - all imperative setup code lives here under strict syntax
+// ---------------------------------------------------------------------------
 workflow {
-  if(params.logs){
+  main:
+  // check if snpSift is available, install if missing
+  if (!file(params.snpSift).exists()) {
+      println "SnpSift not found: ${params.snpSift}"
+      println "Installing SnpSift..."
+      def sout = new StringBuilder()
+      def serr = new StringBuilder()
+      def proc = "bash ${params.installtools} ${workflow.launchDir}/tools".execute()
+      proc.consumeProcessOutput(sout, serr)
+      proc.waitFor()
+  } else {
+      println "SnpSift found: ${params.snpSift}"
+  }
+
+  // check if bcftools is available, install if missing
+  if (!file(params.bcftools).exists()) {
+      println "bcftools not found: ${params.bcftools}"
+      println "Installing bcftools..."
+      def sout = new StringBuilder()
+      def serr = new StringBuilder()
+      def proc = "bash ${params.installtools} ${workflow.launchDir}/tools".execute()
+      proc.consumeProcessOutput(sout, serr)
+      proc.waitFor()
+  } else {
+      println "bcftools found: ${params.bcftools}"
+  }
+
+  // validate input directory (error() replaces System.exit(1))
+  if (!params.inputDir)
+    error "Please specify --inputDir"
+
+  if (!file(params.inputDir).isDirectory())
+    error "Input directory ${params.inputDir} is not a directory"
+
+  // create a channel from the input dir only containing vcf files
+  vcfFiles = channel.fromPath("${params.inputDir}/*.vcf")
+                    .map { vcf -> tuple(vcf.baseName.tokenize(".")[0], vcf) }
+
+  // // check what's inside the channel
+  // vcfFiles.view()
+
+  if (params.logs) {
     awesome_pipeline(vcfFiles)
   } else {
     removelogs(vcfFiles)
   }
-}
 
-
-// When workflow is finished, print some metadata
-// can also send an email here using sendmail
-// see https://www.nextflow.io/docs/latest/metadata.html
-workflow.onComplete {
+  // When workflow is finished, print some metadata.
+  // can also send an email here using sendmail
+  // see https://www.nextflow.io/docs/latest/metadata.html
+  // NOTE (26.04): the strict parser does not allow a standalone
+  // `workflow.onComplete { ... }` statement at the top level; the handler is
+  // now an `onComplete:` section inside the entry workflow.
+  onComplete:
   def status = "NA"
   if(workflow.success) {
 
@@ -310,7 +234,7 @@ workflow.onComplete {
     println("""
     Pipeline execution summary
     --------------------------
-  
+
     Successful completion : ${workflow.success}
     Launch time           : ${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}
     Ending time           : ${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')} (duration: ${workflow.duration})
@@ -346,3 +270,4 @@ workflow.onComplete {
     )
   }
 }
+
