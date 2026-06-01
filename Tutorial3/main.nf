@@ -10,7 +10,7 @@ params.logs = null
 
 // tools that will be used in the pipeline
 params.snpSift = currentDir + '/tools/snpEff/SnpSift.jar'
-params.bcftools = currentDir + '/tools/bcftools-1.16/bcftools'
+params.bcftools = currentDir + '/tools/bcftools/bcftools'
 
 // tools installation script
 params.installtools = currentDir + '/tools/install_tools.sh'
