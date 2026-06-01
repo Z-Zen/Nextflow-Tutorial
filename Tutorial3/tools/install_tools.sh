@@ -4,7 +4,7 @@
 if [ -f $1/snpEff_latest_core.zip ]; then
     echo "snpEff_latest_core.zip already downloaded"
 else
-    wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip -O $1/snpEff_latest_core.zip
+    wget https://downloads.sourceforge.net/project/snpeff/snpEff_latest_core.zip -O $1/snpEff_latest_core.zip
 fi
 
 # check if  snpEff is unzipped
